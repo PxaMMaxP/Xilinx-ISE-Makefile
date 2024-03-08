@@ -70,12 +70,34 @@ endif
 TEST_NAMES = $(foreach file,$(VTEST) $(VHDTEST),$(basename $(file)))
 TEST_EXES = $(foreach test,$(TEST_NAMES),build/isim_$(test)$(EXE))
 
-RUN = @echo -ne "\n\n\e[1;33m======== $(1) ========\e[m\n\n"; \
+RUN = @echo "\n\e[1;33m============ $(1) ============\e[m\n"; \
 	cd build && $(XILINX)/bin/$(XILINX_PLATFORM)/$(1)
 
 # isim executables don't work without this
 export XILINX
 
+# Initialize the libs and paths variables for VHDL and Verilog sources
+VHD_PATHS ?=
+VHD_LIBS  ?=
+V_PATHS   ?=
+V_LIBS    ?=
+
+# Define a function to process source files
+define process_sources
+$(foreach src,$(1),\
+    $(eval lib_and_path=$(subst :, ,$(src))) \
+    $(eval libname=$(word 1,$(lib_and_path))) \
+    $(eval filepath=$(word 2,$(lib_and_path))) \
+    $(if $(filepath),,$(eval filepath=$(libname)) $(eval libname=work)) \
+    $(eval $(2) += $(libname)) \
+    $(eval $(3) += $(filepath)) \
+)
+endef
+
+# Run the function for VHDL sources
+$(eval $(call process_sources,$(VHDSOURCE),VHD_LIBS,VHD_PATHS))
+# Run the function for Verilog sources
+$(eval $(call process_sources,$(VSOURCE),V_LIBS,V_PATHS))
 
 ###########################################################################
 # Default build
@@ -90,8 +112,9 @@ build/$(PROJECT).prj: project.cfg
 	@echo "Updating $@"
 	@mkdir -p build
 	@rm -f $@
-	@$(foreach file,$(VSOURCE),echo "verilog work \"../$(file)\"" >> $@;)
-	@$(foreach file,$(VHDSOURCE),echo "vhdl work \"../$(file)\"" >> $@;)
+	@$(foreach idx,$(shell seq 1 $(words $(V_PATHS))),echo "verilog $(word $(idx),$(V_LIBS)) \"../$(word $(idx),$(V_PATHS))\"" >> $@;)
+	@$(foreach idx,$(shell seq 1 $(words $(VHD_PATHS))),echo "vhdl $(word $(idx),$(VHD_LIBS)) \"../$(word $(idx),$(VHD_PATHS))\"" >> $@;)
+
 
 build/$(PROJECT)_sim.prj: build/$(PROJECT).prj
 	@cp build/$(PROJECT).prj $@
@@ -113,7 +136,7 @@ build/$(PROJECT).scr: project.cfg
 	    "-p $(TARGET_PART)" \
 	    > build/$(PROJECT).scr
 
-$(BITFILE): project.cfg $(VSOURCE) $(CONSTRAINTS) build/$(PROJECT).prj build/$(PROJECT).scr
+$(BITFILE): project.cfg $(V_PATHS) $(VHD_PATHS) $(CONSTRAINTS) build/$(PROJECT).prj build/$(PROJECT).scr
 	@mkdir -p build
 	$(call RUN,xst) $(COMMON_OPTS) \
 	    -ifn $(PROJECT).scr
@@ -127,7 +150,17 @@ $(BITFILE): project.cfg $(VSOURCE) $(CONSTRAINTS) build/$(PROJECT).prj build/$(P
 	    -w $(PROJECT).map.ncd $(PROJECT).ncd $(PROJECT).pcf
 	$(call RUN,bitgen) $(COMMON_OPTS) $(BITGEN_OPTS) \
 	    -w $(PROJECT).ncd $(PROJECT).bit
-	@echo -ne "\e[1;32m======== OK ========\e[m\n"
+	@echo "\e[1;32m============ OK ============\e[m\n\n"
+	@echo "\e[1;33m============ Reports.. ===========\e[m\n"
+	@echo "\e[1;97m==== Synthesis Summary Report ====\e[m"
+	@echo "\e[1;35m ./build/$(PROJECT).srp\e[m\n"
+	@echo "\e[1;97m======= Map Summary Report =======\e[m"
+	@echo "\e[1;35m ./build/$(PROJECT).map.mrp\e[m\n"
+	@echo "\e[1;97m======= PAR Summary Report =======\e[m"
+	@echo "\e[1;35m ./build/$(PROJECT).par\e[m\n"
+	@echo "\e[1;97m===== Pinout Summary Report ======\e[m"
+	@echo "\e[1;35m ./build/$(PROJECT)_pad.txt\e[m\n"
+	
 
 
 ###########################################################################
@@ -137,10 +170,13 @@ $(BITFILE): project.cfg $(VSOURCE) $(CONSTRAINTS) build/$(PROJECT).prj build/$(P
 trace: project.cfg $(BITFILE)
 	$(call RUN,trce) $(COMMON_OPTS) $(TRACE_OPTS) \
 	    $(PROJECT).ncd $(PROJECT).pcf
+	@echo "\n\e[1;33m============ Reports.. ===========\e[m\n"
+	@echo "\e[1;97m===== Timing Summary Report ======\e[m"
+	@echo "\e[1;35m ./build/$(PROJECT).twr\e[m\n"
 
 test: $(TEST_EXES)
 
-build/isim_%$(EXE): build/$(PROJECT)_sim.prj $(VSOURCE) $(VHDSOURCE) $(VTEST) $(VHDTEST)
+build/isim_%$(EXE): $(V_PATHS) $(VHD_PATHS) build/$(PROJECT)_sim.prj $(VTEST) $(VHDTEST)
 	$(call RUN,fuse) $(COMMON_OPTS) $(FUSE_OPTS) \
 	    -prj $(PROJECT)_sim.prj \
 	    -o isim_$*$(EXE) \
@@ -163,17 +199,17 @@ isimgui: build/isim_$(TB)$(EXE)
 
 ifeq ($(PROGRAMMER), impact)
 prog: $(BITFILE)
-	$(XILINX)/bin/$(XILINX_PLATFORM)/impact $(IMPACT_OPTS)
+	sudo $(XILINX)/bin/$(XILINX_PLATFORM)/impact $(IMPACT_OPTS)
 endif
 
 ifeq ($(PROGRAMMER), digilent)
 prog: $(BITFILE)
-	$(DJTG_EXE) prog -d $(DJTG_DEVICE) -i $(DJTG_INDEX) -f $(BITFILE)
+	yes Y | sudo $(DJTG_EXE) prog -d $(DJTG_DEVICE) -i $(DJTG_INDEX) -f $(BITFILE)
 endif
 
 ifeq ($(PROGRAMMER), xc3sprog)
 prog: $(BITFILE)
-	$(XC3SPROG_EXE) -c $(XC3SPROG_CABLE) $(XC3SPROG_OPTS) $(BITFILE)
+	sudo $(XC3SPROG_EXE) -c $(XC3SPROG_CABLE) $(XC3SPROG_OPTS) $(BITFILE)
 endif
 
 ifeq ($(PROGRAMMER), none)
@@ -181,7 +217,13 @@ prog:
 	$(error PROGRAMMER must be set to use 'make prog')
 endif
 
-
+###########################################################################
+# Flash
 ###########################################################################
 
-# vim: set filetype=make: #
+ifeq ($(PROGRAMMER), digilent)
+flash: $(BITFILE)
+	yes Y | sudo $(DJTG_EXE) prog -d $(DJTG_DEVICE) -i $(DJTG_FLASH_INDEX) -f $(BITFILE)
+endif
+
+###########################################################################
