@@ -33,9 +33,9 @@ COMMON_OPTS     ?= -intstyle xflow
 XST_OPTS        ?=
 NGDBUILD_OPTS   ?=
 MAP_OPTS        ?=
-PAR_OPTS        ?=
+PAR_OPTS        ?= -detail 
 BITGEN_OPTS     ?=
-TRACE_OPTS      ?=
+TRACE_OPTS      ?= -v 3 -n 3
 FUSE_OPTS       ?= -incremental
 
 PROGRAMMER      ?= none
