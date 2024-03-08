@@ -12,9 +12,11 @@ Many thanks for the good work!
 
 - Xilinx ISE, ideally 14.7 (the final version)
 
-- GNU (or compatible?) Make \
-  Install this through Cygwin on Windows \
-  or on Linux. (Windows Subsystem for Linux is tested)
+  Works great on Linux. Windows Subsystem for Linux is tested and works well.
+
+- GNU (or compatible?) Make
+
+  Install this through Cygwin on Windows.
 
 ## Creating a project
 
@@ -50,6 +52,13 @@ it consists of `KEY = value` pairs. It must define at least the following keys:
 
       VSOURCE += foo.v
       VSOURCE += bar.v
+
+  You can also add a library name to the source file, e.g.
+
+      VSOURCE += my_lib:foo.v
+      VSOURCE += my_lib:bar.v
+
+  The default library name is `work`.
 
 A simple `project.cfg` may thus resemble:
 
@@ -87,8 +96,19 @@ A number of other keys can be set in the project configuration, including:
 - `XST_OPTS`, `NGDBUILD_OPTS`, `MAP_OPTS`, `PAR_OPTS`, `BITGEN_OPTS`,
   `TRACE_OPTS`, `FUSE_OPTS`
 
-  Extra command-line options to be passed to the corresponding ISE tools. All
-  default to empty.
+  Extra command-line options to be passed to the corresponding ISE tools.
+
+  Defaults is:
+
+  ```
+  XST_OPTS        ?=
+  NGDBUILD_OPTS   ?=
+  MAP_OPTS        ?= -detail
+  PAR_OPTS        ?=
+  BITGEN_OPTS     ?=
+  TRACE_OPTS      ?= -v 3 -n 3
+  FUSE_OPTS       ?= -incremental
+  ```
 
   Note that `XST_OPTS` will not appear on the command line during
   compilation, as the XST options are embedded in a script file.
@@ -122,13 +142,19 @@ A number of other keys can be set in the project configuration, including:
     Uses the Digilent JTAG utility for programming, which must be installed
     separately. The name of the board must be set as `DJTG_DEVICE`; the
     path to the djtgcfg executable can be set as `DJTG_EXE`, and the index
-    of the device can be set as `DJTG_INDEX`.
+    of the device can be set as `DJTG_INDEX`. You can set the flash index
+    with `DJTG_FLASH_INDEX`.
 
   - `xc3sprog`
 
     Uses the xc3sprog utility for programming, which must also be installed
     separately. The cable name must be set as `XC3SPROG_CABLE`; additional
     options can be set as `XC3SPROG_OPTS`.
+
+- `PROGRAMMER_PRE`
+
+  A command to be run before programming. This can be used to use `sudo` or
+  `yes` to confirm programming.
 
 ## Targets
 
@@ -147,9 +173,31 @@ The Xilinx ISE Makefile implements the following targets:
   Writes the bitstream to a target device. Requires some additional
   configuration; see below for details.
 
-## Running unit tests
+- `make flash`
 
-is a work in progress.
+  Writes the bitstream to a flash device.
+  **This is currently only for digilent implemented.**
+
+## Console output
+
+After a successful build, you will find the paths to the generated **reports** on the console. E.g.:
+
+```
+============ Reports.. ===========
+
+==== Synthesis Summary Report ====
+ ./build/Example.srp
+
+======= Map Summary Report =======
+ ./build/Example.map.mrp
+
+======= PAR Summary Report =======
+ ./build/Example.par
+
+===== Pinout Summary Report ======
+ ./build/Example_pad.txt
+
+```
 
 ## Unimplemented features
 
@@ -163,6 +211,8 @@ encouraged!)
 - Synthesis tools other than XST
 
 - Display and/or handling of warnings and errors from `build/_xmsgs`
+
+- Running unit tests
 
 - Anything else (open an issue?)
 

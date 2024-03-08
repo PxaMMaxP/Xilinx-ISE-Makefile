@@ -35,30 +35,32 @@ ifndef TARGET_PART
     $(error TARGET_PART must be defined)
 endif
 
-TOPLEVEL        ?= $(PROJECT)
-CONSTRAINTS     ?= $(PROJECT).ucf
-BITFILE         ?= build/$(PROJECT).bit
+TOPLEVEL         ?= $(PROJECT)
+CONSTRAINTS      ?= $(PROJECT).ucf
+BITFILE          ?= build/$(PROJECT).bit
+ 
+COMMON_OPTS      ?= -intstyle xflow
+XST_OPTS         ?=
+NGDBUILD_OPTS    ?=
+MAP_OPTS         ?= -detail 
+PAR_OPTS         ?=
+BITGEN_OPTS      ?=
+TRACE_OPTS       ?= -v 3 -n 3
+FUSE_OPTS        ?= -incremental
+ 
+PROGRAMMER       ?= none
+PROGRAMMER_PRE   ?=
+ 
+IMPACT_OPTS      ?= -batch impact.cmd
+ 
+DJTG_EXE         ?= djtgcfg
+DJTG_DEVICE      ?= DJTG_DEVICE-NOT-SET
+DJTG_INDEX       ?= 0
+DJTG_FLASH_INDEX ?= 1
 
-COMMON_OPTS     ?= -intstyle xflow
-XST_OPTS        ?=
-NGDBUILD_OPTS   ?=
-MAP_OPTS        ?=
-PAR_OPTS        ?= -detail 
-BITGEN_OPTS     ?=
-TRACE_OPTS      ?= -v 3 -n 3
-FUSE_OPTS       ?= -incremental
-
-PROGRAMMER      ?= none
-
-IMPACT_OPTS     ?= -batch impact.cmd
-
-DJTG_EXE        ?= djtgcfg
-DJTG_DEVICE     ?= DJTG_DEVICE-NOT-SET
-DJTG_INDEX      ?= 0
-
-XC3SPROG_EXE    ?= xc3sprog
-XC3SPROG_CABLE  ?= none
-XC3SPROG_OPTS   ?=
+XC3SPROG_EXE     ?= xc3sprog
+XC3SPROG_CABLE   ?= none
+XC3SPROG_OPTS    ?=
 
 
 ###########################################################################
@@ -209,17 +211,17 @@ isimgui: build/isim_$(TB)$(EXE)
 
 ifeq ($(PROGRAMMER), impact)
 prog: $(BITFILE)
-	sudo $(XILINX)/bin/$(XILINX_PLATFORM)/impact $(IMPACT_OPTS)
+	$(PROGRAMMER_PRE) $(XILINX)/bin/$(XILINX_PLATFORM)/impact $(IMPACT_OPTS)
 endif
 
 ifeq ($(PROGRAMMER), digilent)
 prog: $(BITFILE)
-	yes Y | sudo $(DJTG_EXE) prog -d $(DJTG_DEVICE) -i $(DJTG_INDEX) -f $(BITFILE)
+	$(PROGRAMMER_PRE) $(DJTG_EXE) prog -d $(DJTG_DEVICE) -i $(DJTG_INDEX) -f $(BITFILE)
 endif
 
 ifeq ($(PROGRAMMER), xc3sprog)
 prog: $(BITFILE)
-	sudo $(XC3SPROG_EXE) -c $(XC3SPROG_CABLE) $(XC3SPROG_OPTS) $(BITFILE)
+	$(PROGRAMMER_PRE) $(XC3SPROG_EXE) -c $(XC3SPROG_CABLE) $(XC3SPROG_OPTS) $(BITFILE)
 endif
 
 ifeq ($(PROGRAMMER), none)
@@ -233,7 +235,7 @@ endif
 
 ifeq ($(PROGRAMMER), digilent)
 flash: $(BITFILE)
-	yes Y | sudo $(DJTG_EXE) prog -d $(DJTG_DEVICE) -i $(DJTG_FLASH_INDEX) -f $(BITFILE)
+	$(PROGRAMMER_PRE) $(DJTG_EXE) prog -d $(DJTG_DEVICE) -i $(DJTG_FLASH_INDEX) -f $(BITFILE)
 endif
 
 ###########################################################################
