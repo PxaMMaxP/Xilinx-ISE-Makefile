@@ -4,13 +4,15 @@
 ## To the extent possible under law, the author(s) have dedicated all copyright
 ## and related and neighboring rights to this software to the public domain
 ## worldwide. This software is distributed without any warranty.
+##
+## Makefile github repository: https://github.com/PxaMMaxP/Xilinx-ISE-Makefile
 ###########################################################################
 
 ###########################################################################
 # Version
 ###########################################################################
 
-Makefile_Version := 1.0.0
+Makefile_Version := 1.0.1
 $(info ISE Makefile Version: $(Makefile_Version))
 
 ###########################################################################
@@ -42,7 +44,7 @@ BITFILE          ?= build/$(PROJECT).bit
 COMMON_OPTS      ?= -intstyle xflow
 XST_OPTS         ?=
 NGDBUILD_OPTS    ?=
-MAP_OPTS         ?= -detail 
+MAP_OPTS         ?= -detail
 PAR_OPTS         ?=
 BITGEN_OPTS      ?=
 TRACE_OPTS       ?= -v 3 -n 3
