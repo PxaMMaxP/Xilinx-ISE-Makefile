@@ -12,7 +12,7 @@
 # Version
 ###########################################################################
 
-Makefile_Version := 1.1.1
+Makefile_Version := 1.1.2
 $(info ISE Makefile Version: $(Makefile_Version))
 
 ###########################################################################
@@ -133,8 +133,7 @@ $(eval $(call process_sources,$(VTEST),V_TEST_LIBS,V_TEST_PATHS))
 # Get the test names..
 TEST_PATHS = $(foreach file,$(V_TEST_PATHS) $(VHD_TEST_PATHS),$(basename $(file)))
 TEST_NAMES = $(foreach path,$(TEST_PATHS),$(notdir $(path)))
-TEST_EXES = $(foreach test,$(TEST_NAMES),build/isim_$(test)$(EXE))
-
+TEST_EXES = $(foreach test,$(TEST_NAMES),$(BUILD_DIR)/isim_$(test)$(EXE))
 
 ###########################################################################
 # Default build
@@ -155,8 +154,8 @@ $(BUILD_DIR)/$(PROJECT).prj: ../project.cfg
 
 $(BUILD_DIR)/$(PROJECT)_sim.prj: $(BUILD_DIR)/$(PROJECT).prj
 	@cp $(BUILD_DIR)/$(PROJECT).prj $@
-	@$(foreach file,$(VTEST),echo "verilog work \"../../$(file)\"" >> $@;)
-	@$(foreach file,$(VHDTEST),echo "vhdl work \"../../$(file)\"" >> $@;)
+	@$(foreach idx,$(shell seq 1 $(words $(V_TEST_PATHS))),echo "verilog $(word $(idx),$(V_TEST_LIBS)) \"../$(word $(idx),$(V_TEST_PATHS))\"" >> $@;)
+	@$(foreach idx,$(shell seq 1 $(words $(VHD_TEST_PATHS))),echo "vhdl $(word $(idx),$(VHD_TEST_LIBS)) \"../$(word $(idx),$(VHD_TEST_PATHS))\"" >> $@;)
 	@echo "verilog work $(XILINX)/verilog/src/glbl.v" >> $@
 
 $(BUILD_DIR)/$(PROJECT).scr: ../project.cfg
@@ -216,13 +215,13 @@ test: buildtest runtest
 runtest: ${TEST_NAMES}
 
 ${TEST_NAMES}:
-	@grep --no-filename --no-messages 'ISIM:' $@.{v,vhd} | cut -d: -f2 > build/isim_$@.cmd
-	@echo "$(ISIM_CMD)" >> build/isim_$@.cmd
-	cd build ; ./isim_$@$(EXE) $(ISIM_OPTS) -tclbatch isim_$@.cmd ;
+	@grep --no-filename --no-messages 'ISIM:' $@.{v,vhd} | cut -d: -f2 > $(BUILD_DIR)/isim_$@.cmd
+	@echo "$(ISIM_CMD)" >> $(BUILD_DIR)/isim_$@.cmd
+	cd $(BUILD_DIR) ; ./isim_$@$(EXE) $(ISIM_OPTS) -tclbatch isim_$@.cmd ;
 
 buildtest: ${TEST_EXES}
 
-$(BUILD_DIR)/isim_%$(EXE): build/$(PROJECT)_sim.prj $(VSOURCE) $(VHDSOURCE) ${V_TEST_PATHS} $(VHD_TEST_PATHS)
+$(BUILD_DIR)/isim_%$(EXE): $(BUILD_DIR)/$(PROJECT)_sim.prj $(V_PATHS) $(VHD_PATHS) ${V_TEST_PATHS} $(VHD_TEST_PATHS)
 	$(call RUN,fuse) $(COMMON_OPTS) $(FUSE_OPTS) \
 	    -prj $(PROJECT)_sim.prj \
 	    -o isim_$*$(EXE) \
