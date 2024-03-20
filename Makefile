@@ -12,7 +12,7 @@
 # Version
 ###########################################################################
 
-Makefile_Version := 1.1.2
+Makefile_Version := 1.1.3
 $(info ISE Makefile Version: $(Makefile_Version))
 
 ###########################################################################
@@ -197,7 +197,9 @@ $(BITFILE): ../project.cfg $(V_PATHS) $(VHD_PATHS) ../$(CONSTRAINTS) $(BUILD_DIR
 	@echo "\e[1;97m===== Pinout Summary Report ======\e[m"
 	@echo "\e[1;35m ./$(BUILD_DIR)/$(PROJECT)_pad.txt\e[m\n"
 	
-
+copy: $(BITFILE)
+	@cp $(BITFILE) $(COPY_TARGET_DIR)/$(PROJECT).bit
+	@echo "\n\e[1;32m= Copy bitfile successful =\e[m\n"
 
 ###########################################################################
 # Testing (work in progress)
